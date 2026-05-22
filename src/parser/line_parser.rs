@@ -250,8 +250,22 @@ impl<'s> LineParser<'s> {
         if self.src.starts_with("    ") {
             return Line::new_code(self.code_block_compound_from_idx(4));
         }
-        if self.src.starts_with('\t') {
+        // Code block: tab not followed by list marker
+        if self.src.starts_with('\t') && !self.src[1..].starts_with("- ") && !self.src[1..].starts_with("* ") && !self.src[1..].starts_with("+ ") {
             return Line::new_code(self.code_block_compound_from_idx(1));
+        }
+        // Support tab-indented lists (CommonMark: tab at start followed by list marker)
+        if self.src.starts_with("\t- ") {
+            self.idx = 3;
+            return Line::new_list_item(1, self.parse_compounds(false));
+        }
+        if self.src.starts_with("\t* ") {
+            self.idx = 3;
+            return Line::new_list_item(1, self.parse_compounds(false));
+        }
+        if self.src.starts_with("\t+ ") {
+            self.idx = 3;
+            return Line::new_list_item(1, self.parse_compounds(false));
         }
         if self.src.starts_with("* ") {
             self.idx = 2;
@@ -702,6 +716,25 @@ mod tests {
                     Compound::raw_str(" item"),
                 ]
             )
+        );
+    }
+
+    #[test]
+    fn tab_indented_list_items() {
+        // Test tab-indented dash list
+        assert_eq!(
+            Line::from("\t- item"),
+            Line::new_list_item(1, vec![Compound::raw_str("item"),])
+        );
+        // Test tab-indented asterisk list
+        assert_eq!(
+            Line::from("\t* item"),
+            Line::new_list_item(1, vec![Compound::raw_str("item"),])
+        );
+        // Test tab-indented plus list
+        assert_eq!(
+            Line::from("\t+ item"),
+            Line::new_list_item(1, vec![Compound::raw_str("item"),])
         );
     }
 }
