@@ -269,6 +269,39 @@ impl<'s> LineParser<'s> {
             self.idx = 5;
             return Line::new_list_item(3, self.parse_compounds(false));
         }
+        // Support dash (-) and plus (+) list markers
+        if self.src.starts_with("- ") {
+            self.idx = 2;
+            return Line::new_list_item(0, self.parse_compounds(false));
+        }
+        if self.src.starts_with(" - ") {
+            self.idx = 3;
+            return Line::new_list_item(1, self.parse_compounds(false));
+        }
+        if self.src.starts_with("  - ") {
+            self.idx = 4;
+            return Line::new_list_item(2, self.parse_compounds(false));
+        }
+        if self.src.starts_with("   - ") {
+            self.idx = 5;
+            return Line::new_list_item(3, self.parse_compounds(false));
+        }
+        if self.src.starts_with("+ ") {
+            self.idx = 2;
+            return Line::new_list_item(0, self.parse_compounds(false));
+        }
+        if self.src.starts_with(" + ") {
+            self.idx = 3;
+            return Line::new_list_item(1, self.parse_compounds(false));
+        }
+        if self.src.starts_with("  + ") {
+            self.idx = 4;
+            return Line::new_list_item(2, self.parse_compounds(false));
+        }
+        if self.src.starts_with("   + ") {
+            self.idx = 5;
+            return Line::new_list_item(3, self.parse_compounds(false));
+        }
         if self.src == ">" {
             return Line::new_quote(Vec::new());
         }
@@ -612,6 +645,63 @@ mod tests {
                 Alignment::Center,
                 Alignment::Right,
             ])
+        );
+    }
+
+    #[test]
+    fn dash_list_items() {
+        // Test dash marker at level 0
+        assert_eq!(
+            Line::from("- *list* item"),
+            Line::new_list_item(
+                0,
+                vec![
+                    Compound::raw_str("list").italic(),
+                    Compound::raw_str(" item"),
+                ]
+            )
+        );
+        // Test dash marker at level 1 (2 spaces before)
+        assert_eq!(
+            Line::from(" - *list* item"),
+            Line::new_list_item(
+                1,
+                vec![
+                    Compound::raw_str("list").italic(),
+                    Compound::raw_str(" item"),
+                ]
+            )
+        );
+        // Test dash marker at level 2 (4 spaces before)
+        assert_eq!(
+            Line::from("  - deeper"),
+            Line::new_list_item(2, vec![Compound::raw_str("deeper"),])
+        );
+    }
+
+    #[test]
+    fn plus_list_items() {
+        // Test plus marker at level 0
+        assert_eq!(
+            Line::from("+ *list* item"),
+            Line::new_list_item(
+                0,
+                vec![
+                    Compound::raw_str("list").italic(),
+                    Compound::raw_str(" item"),
+                ]
+            )
+        );
+        // Test plus marker at level 1
+        assert_eq!(
+            Line::from(" + *list* item"),
+            Line::new_list_item(
+                1,
+                vec![
+                    Compound::raw_str("list").italic(),
+                    Compound::raw_str(" item"),
+                ]
+            )
         );
     }
 }
