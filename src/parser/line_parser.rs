@@ -237,15 +237,12 @@ impl<'s> LineParser<'s> {
     pub fn line(mut self) -> Line<'s> {
         self.parse_line()
     }
-    
+
     /// Parse a line with context about parent containers
     /// This enables CommonMark-compliant list nesting
     pub(crate) fn parse_line_with_context(
         &mut self,
-        _parent_list: Option<&crate::parser::text_parser::ListContext>,
-        _quote_level: u32,
         list_marker_info: Option<&crate::parser::text_parser::ListMarkerInfo>,
-        _is_quote: bool,
         calculated_depth: u8,
     ) -> Line<'s> {
         // First check for code fences and tables which don't depend on context
@@ -258,12 +255,12 @@ impl<'s> LineParser<'s> {
                 None => Line::TableRow(tr),
             };
         }
-        
+
         // Check for code blocks (4 spaces or tab)
         if self.src.starts_with("    ") {
             return Line::new_code(self.code_block_compound_from_idx(4));
         }
-        
+
         // Check for tab-indented code block (not followed by list marker)
         if self.src.starts_with('\t') {
             let rest = &self.src[1..];
@@ -271,7 +268,7 @@ impl<'s> LineParser<'s> {
                 return Line::new_code(self.code_block_compound_from_idx(1));
             }
         }
-        
+
         // Check for quote lines
         if self.src.starts_with("> ") || self.src == ">" {
             if self.src.starts_with("> ") {
@@ -279,25 +276,25 @@ impl<'s> LineParser<'s> {
             }
             return Line::new_quote(self.parse_compounds(false));
         }
-        
+
         // Check for code fences
         if self.src.starts_with("```") {
             self.idx = 3;
             return Line::new_code_fence(self.parse_compounds(false));
         }
-        
+
         // Check for list markers
         if let Some(info) = list_marker_info {
             // Use the pre-calculated depth from the text parser
             let depth = calculated_depth;
-            
+
             // Set index based on marker position using byte offset
             let marker_and_space = info.width as usize;
             self.idx = info.byte_offset as usize + marker_and_space;
-            
+
             return Line::new_list_item(depth, self.parse_compounds(false));
         }
-        
+
         // Check for tab-indented lists (CommonMark: tab at start followed by list marker)
         if self.src.starts_with("\t- ") {
             self.idx = 3;
@@ -311,17 +308,17 @@ impl<'s> LineParser<'s> {
             self.idx = 3;
             return Line::new_list_item(1, self.parse_compounds(false));
         }
-        
+
         // Fall back to the original parse_line for other cases
-        return self.parse_line_fallback();
+        self.parse_line_fallback()
     }
-    
+
     /// Fallback method that contains the original hardcoded space-counting logic
     /// This is used when no context is provided or for non-list lines
     fn parse_line_fallback(&mut self) -> Line<'s> {
         // Reset state
         self.idx = 0;
-        
+
         // Tables first
         if self.src.starts_with('|') {
             let tr = TableRow {
@@ -332,13 +329,17 @@ impl<'s> LineParser<'s> {
                 None => Line::TableRow(tr),
             };
         }
-        
+
         // Code block: 4 spaces
         if self.src.starts_with("    ") {
             return Line::new_code(self.code_block_compound_from_idx(4));
         }
         // Code block: tab not followed by list marker
-        if self.src.starts_with('\t') && !self.src[1..].starts_with("- ") && !self.src[1..].starts_with("* ") && !self.src[1..].starts_with("+ ") {
+        if self.src.starts_with('\t')
+            && !self.src[1..].starts_with("- ")
+            && !self.src[1..].starts_with("* ")
+            && !self.src[1..].starts_with("+ ")
+        {
             return Line::new_code(self.code_block_compound_from_idx(1));
         }
         // Support tab-indented lists (CommonMark: tab at start followed by list marker)
@@ -426,7 +427,7 @@ impl<'s> LineParser<'s> {
             Line::new_paragraph(compounds)
         }
     }
-    
+
     /// Original parse_line method - delegates to fallback for now
     /// This maintains backwards compatibility
     pub(crate) fn parse_line(&mut self) -> Line<'s> {
